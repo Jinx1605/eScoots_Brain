@@ -72,9 +72,9 @@ void loop(){
   mapped_dac = convertToVolt(throttle_mapped);
   
 //  if (mapped_dac < 0.00) { mapped_dac = 0.00; }
-//  if (mapped_dac > 3.305) { mapped_dac = 3.305; }
+//  if (mapped_dac > 3.305) { mapped_dac = 3.303; }
 
-  mapped_dac = constrain(mapped_dac, 0.00, 3.305);
+  mapped_dac = constrain(mapped_dac, 0.00, 3.303);
   
   //Serial.println(mapped_dac); //Read value at ADC pin A1 and print it
   analogWrite(A0,setDAC(mapped_dac));
