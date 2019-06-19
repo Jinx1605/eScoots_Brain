@@ -11,7 +11,11 @@
 #include <SD.h>
 #include <Adafruit_GFX.h>
 #include "Adafruit_EPD.h"
+#include <Adafruit_NeoPixel.h>
 #include "RTClib.h"
+#include <Sabertooth.h>
+
+Sabertooth ST(128);
 
 #if defined(ARDUINO_SAMD_FEATHER_M0) || defined(ARDUINO_FEATHER_M4)
   #define SD_CS       5
@@ -32,6 +36,14 @@ Adafruit_SSD1675 epd(250, 122, EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 #define DS3231_TEMP_MSB 0x11
 
 RTC_DS3231 rtc;
+
+// Which pin on the Arduino is connected to the NeoPixels?
+#define NPPIN 8 // On Trinket or Gemma, suggest changing this to 1
+
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS 1 // Popular NeoPixel ring size
+
+Adafruit_NeoPixel NP(NUMPIXELS, NPPIN, NEO_GRB + NEO_KHZ800);
 
 /* Scoots BMP Splash Logo */
 const uint8_t logo_bmp[] PROGMEM = {
@@ -83,39 +95,38 @@ String theTemp = "";
 File logFile;
 
 void setup() {
+  NP.begin();
+  NP.clear();
+  NP.setBrightness(150);
+  
+  SabertoothTXPinSerial.begin(9600); // 9600 is the default baud rate for Sabertooth packet serial
+  
   Serial.begin(115200); //start serial communication
-  while(!Serial){}
+  //while(!Serial){}
   
   analogReadResolution(12); //set the ADC resolution to 12 bits, default is 10
 
   initRTC();
   initSD();
   initEPD();
-  showSplash(5000);
- 
+  showSplash(1000);
+  NP.setPixelColor(0, NP.Color(0, 95, 0));
+  NP.show();
 }
 
 void loop(){
   //Serial.println();
   Serial.print("Measured throttle value is : ");
   throttle_input = analogRead(A0);
-  throttle_mapped = map(throttle_input, 1085, 3210, 0, 4095);
+  throttle_mapped = map(throttle_input, 1065, 3195, 0, 127);
   if (throttle_mapped < 0) {throttle_mapped = 0; }
   
-  mapped_dac = convertToVolt(throttle_mapped);
+  throttle_mapped = constrain(throttle_mapped, 0, 127);
   
-//  if (mapped_dac < 0.00) { mapped_dac = 0.00; }
-//  if (mapped_dac > 3.305) { mapped_dac = 3.303; }
-
-  mapped_dac = constrain(mapped_dac, 0.00, 3.303);
-  
-  //Serial.println(mapped_dac); //Read value at ADC pin A1 and print it
-  //analogWrite(A0,setDAC(mapped_dac));
   Serial.print(throttle_input); //Read value at ADC pin A1 and print it
   Serial.print(", Mapped throttle value is : ");
-  Serial.print(throttle_mapped);
-  Serial.print(", Mapped throttle voltage is : ");
-  Serial.println(setDAC(mapped_dac));
+  Serial.println(throttle_mapped);
+  ST.motor(throttle_mapped);
 
 }
 
